@@ -14,9 +14,6 @@ import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
-
 import in.ashokit.entity.Customer;
 import in.ashokit.repo.CustomerRepository;
 import lombok.AllArgsConstructor;
@@ -26,80 +23,77 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class SpringBatchConfig {
 
-	private JobBuilderFactory jobBuilderFactory;
-	private StepBuilderFactory stepBuilderFactory;
-	private CustomerRepository customerRepository;
+    private JobBuilderFactory jobBuilderFactory;
+    private StepBuilderFactory stepBuilderFactory;
+    private CustomerRepository customerRepository;
 
-	@Bean
-	public FlatFileItemReader<Customer> customerReader() {
-		FlatFileItemReader<Customer> itemReader = new FlatFileItemReader<>();
-		itemReader.setResource(new FileSystemResource("src/main/resources/customers.csv"));
-		itemReader.setName("csv-reader");
-		itemReader.setLinesToSkip(1);
-		itemReader.setLineMapper(lineMapper());
-		return itemReader;
-	}
 
-	private LineMapper<Customer> lineMapper() {
+    //Item reader
+    @Bean
+    public FlatFileItemReader<Customer> customerReader() {
+        FlatFileItemReader<Customer> itemReader = new FlatFileItemReader<>();
+        itemReader.setResource(new FileSystemResource("src/main/resources/customers.csv"));
+        itemReader.setName("csv-reader"); //seti ay name lil reader
+        itemReader.setLinesToSkip(1);  //first line we don't need to insert (title)
+        itemReader.setLineMapper(lineMapper()); //we are going to map every line to object
+        return itemReader;
+    }
 
-		DefaultLineMapper<Customer> lineMapper = new DefaultLineMapper<>();
+    private LineMapper<Customer> lineMapper() {
 
-		DelimitedLineTokenizer lineTokenizer = new DelimitedLineTokenizer();
-		lineTokenizer.setDelimiter(",");
-		lineTokenizer.setStrict(false);
-		lineTokenizer.setNames("id", "firstName", "lastName", "email", "gender", "contactNo", "country", "dob");
+        DefaultLineMapper<Customer> lineMapper = new DefaultLineMapper<>();
 
-		BeanWrapperFieldSetMapper<Customer> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
-		fieldSetMapper.setTargetType(Customer.class);
+        DelimitedLineTokenizer lineTokenizer = new DelimitedLineTokenizer();
+        lineTokenizer.setDelimiter(",");
+        lineTokenizer.setStrict(false); //if column is not available it will consider it null
+        lineTokenizer.setNames("id", "firstName", "lastName", "email", "gender", "contactNo", "country", "dob");
 
-		lineMapper.setLineTokenizer(lineTokenizer);
-		lineMapper.setFieldSetMapper(fieldSetMapper);
+        BeanWrapperFieldSetMapper<Customer> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
+        fieldSetMapper.setTargetType(Customer.class);
 
-		return lineMapper;
-	}
+        lineMapper.setLineTokenizer(lineTokenizer);
+        lineMapper.setFieldSetMapper(fieldSetMapper);
 
-	@Bean
-	public CustomerProcessor customerProcessor() {
-		return new CustomerProcessor();
-	}
+        return lineMapper;
+    }
 
-	@Bean
-	public RepositoryItemWriter<Customer> customerWriter() {
+    //Item processor
+    @Bean
+    public CustomerProcessor customerProcessor() {
+        return new CustomerProcessor();
+    }
 
-		RepositoryItemWriter<Customer> writer = new RepositoryItemWriter<>();
-		writer.setRepository(customerRepository);
-		writer.setMethodName("save");
 
-		return writer;
-	}
-	
-	
-	@Bean
-	public Step step() {
-		return stepBuilderFactory.get("step-1").<Customer, Customer>chunk(10)
-						  .reader(customerReader())
-						  .processor(customerProcessor())
-						  .writer(customerWriter())
-						  .taskExecutor(taskExecutor())
-						  .build();
-	}
-	
-	@Bean
-	public Job job() {
-		return jobBuilderFactory.get("customers-import")
-								.flow(step())
-								.end()
-								.build();
-	}
-	
-	@Bean
-	public TaskExecutor taskExecutor() {
-		SimpleAsyncTaskExecutor taskExecutor = new SimpleAsyncTaskExecutor();
-		taskExecutor.setConcurrencyLimit(10);
-		return taskExecutor;
-	}
-	
-	
+    //Item writer
+    @Bean
+    public RepositoryItemWriter<Customer> customerWriter() {
+
+        RepositoryItemWriter<Customer> writer = new RepositoryItemWriter<>();
+        writer.setRepository(customerRepository);
+        writer.setMethodName("save");
+
+        return writer;
+    }
+
+    //Create step
+
+    @Bean
+    public Step step() {
+        //give him any name , in our case it will be step-1
+        // 10  number of records to process
+
+        return stepBuilderFactory.get("step-1").<Customer, Customer>chunk(10).reader(customerReader()).processor(customerProcessor()).writer(customerWriter())
+                .build();
+    }
+
+    //Create job
+    //You can add him multiples steps
+    @Bean
+    public Job job() {
+        //Give any name
+        return jobBuilderFactory.get("customers-import").flow(step()).end().build();
+    }
+
 }
 
 

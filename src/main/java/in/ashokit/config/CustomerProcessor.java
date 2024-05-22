@@ -6,12 +6,15 @@ import in.ashokit.entity.Customer;
 
 public class CustomerProcessor implements ItemProcessor<Customer, Customer> {
 
-	@Override
-	public Customer process(Customer item) throws Exception {
+    @Override
+    public Customer process(Customer item) throws Exception {
 
-		// logic
-
-		return item;
-	}
+        // logic
+//        if (item.getGender().equals("India")) {
+//            return item;
+//        }
+//        return null;
+        return item;
+    }
 
 }

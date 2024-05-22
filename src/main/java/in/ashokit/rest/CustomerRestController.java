@@ -17,10 +17,13 @@ public class CustomerRestController {
 	
 	@Autowired
 	private Job job;
+
+	// Job launcher is responsible to launch job
 	
 	@GetMapping("/import")
 	public void loadDataToDB() throws Exception{
-		
+
+		// Specify parameters when job started for exmaple
 		JobParameters jobParams = new JobParametersBuilder()
 											.addLong("startAt", System.currentTimeMillis()).toJobParameters();
 		
